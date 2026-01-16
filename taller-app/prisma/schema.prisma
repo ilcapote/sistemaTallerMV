@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Cliente {
+  id        String     @id @default(cuid())
+  nombre    String
+  telefono  String
+  email     String?
+  direccion String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  vehiculos Vehiculo[]
+  turnos    Turno[]
+}
+
+model Vehiculo {
+  id        String   @id @default(cuid())
+  patente   String   @unique
+  marca     String
+  modelo    String
+  anio      Int?
+  color     String?
+  clienteId String
+  cliente   Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  turnos    Turno[]
+}
+
+model Repuesto {
+  id          String   @id @default(cuid())
+  nombre      String
+  descripcion String?
+  cantidad    Int      @default(0)
+  precioCompra Float?
+  precioVenta  Float?
+  stockMinimo Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Turno {
+  id          String   @id @default(cuid())
+  fecha       DateTime
+  horaInicio  String
+  horaFin     String?
+  descripcion String
+  estado      String   @default("PENDIENTE")
+  clienteId   String
+  cliente     Cliente     @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  vehiculoId  String
+  vehiculo    Vehiculo    @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
+  trabajos    Trabajo[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Trabajo {
+  id          String   @id @default(cuid())
+  descripcion String
+  precio      Float
+  turnoId     String
+  turno       Turno    @relation(fields: [turnoId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+}
