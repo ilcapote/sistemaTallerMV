@@ -1,0 +1,5 @@
+{
+  "buildCommand": "cd taller-app && npm install && npm run build",
+  "outputDirectory": "taller-app/.next",
+  "installCommand": "cd taller-app && npm install"
+}
