@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const getMonthRangeUtc = (mes: string, anio: string) => {
   const year = parseInt(anio);
   const month = parseInt(mes);
