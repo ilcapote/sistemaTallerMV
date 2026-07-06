@@ -37,6 +37,7 @@ export default function Home() {
   const activeTabRef = useRef(activeTab);
   const showNuevoTurnoRef = useRef(showNuevoTurno);
   const calendarioDialogOpenRef = useRef(calendarioDialogOpen);
+  const exitConfirmPendingRef = useRef(false);
 
   activeTabRef.current = activeTab;
   showNuevoTurnoRef.current = showNuevoTurno;
@@ -62,22 +63,36 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const handlePopState = (e: PopStateEvent) => {
-      e.preventDefault();
+    // Empujamos un estado inicial para que el botón atrás no salga de la app inmediatamente
+    window.history.pushState({ app: true }, "", window.location.href);
+
+    const handlePopState = () => {
+      if (exitConfirmPendingRef.current) {
+        // Si ya está mostrando la confirmación, salir
+        window.removeEventListener("popstate", handlePopState);
+        return;
+      }
+
       const closed = closeTopLayer();
       if (!closed) {
+        exitConfirmPendingRef.current = true;
         setShowExitConfirm(true);
-        window.history.pushState(null, "", window.location.href);
-      } else {
-        window.history.pushState(null, "", window.location.href);
       }
+      // Volvemos a empujar una entrada para capturar el próximo atrás
+      window.history.pushState({ app: true }, "", window.location.href);
     };
 
-    window.history.pushState(null, "", window.location.href);
     window.addEventListener("popstate", handlePopState);
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "¿Seguro que querés salir de la aplicación?";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [closeTopLayer]);
 
@@ -86,8 +101,16 @@ export default function Home() {
   };
 
   const handleExitConfirm = () => {
+    exitConfirmPendingRef.current = false;
     setShowExitConfirm(false);
+    // Salimos dos veces: una para quitar el estado empujado y otra para salir de la página
     window.history.back();
+    setTimeout(() => window.history.back(), 50);
+  };
+
+  const handleExitCancel = () => {
+    exitConfirmPendingRef.current = false;
+    setShowExitConfirm(false);
   };
 
   useEffect(() => {
@@ -249,7 +272,7 @@ export default function Home() {
           <DialogFooter className="flex gap-2 sm:gap-2">
             <Button
               variant="outline"
-              onClick={() => setShowExitConfirm(false)}
+              onClick={handleExitCancel}
               className="flex-1"
             >
               Quedarse
