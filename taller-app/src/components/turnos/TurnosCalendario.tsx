@@ -28,6 +28,7 @@ interface Props {
   onMonthChange?: (month: Date) => void;
   onDateSelect?: (date: Date) => void;
   onCreateTurno?: () => void;
+  onDialogOpenChange?: (open: boolean) => void;
 }
 
 export function TurnosCalendario({
@@ -36,6 +37,7 @@ export function TurnosCalendario({
   onMonthChange,
   onDateSelect,
   onCreateTurno,
+  onDialogOpenChange,
 }: Props) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [turnos, setTurnos] = useState<Turno[]>([]);
@@ -43,6 +45,12 @@ export function TurnosCalendario({
   const [selectedTurno, setSelectedTurno] = useState<Turno | null>(null);
   const [dayModalOpen, setDayModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const hasOpenDialog = dayModalOpen || !!selectedTurno;
+
+  useEffect(() => {
+    onDialogOpenChange?.(hasOpenDialog);
+  }, [hasOpenDialog, onDialogOpenChange]);
 
   useEffect(() => {
     fetchTurnos();

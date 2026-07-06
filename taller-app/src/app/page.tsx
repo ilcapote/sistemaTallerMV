@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Calendar, Users, Car, Package, Plus, Wrench, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { TurnosCalendario } from "@/components/turnos/TurnosCalendario";
 import { NuevoTurnoDialog } from "@/components/turnos/NuevoTurnoDialog";
 import { ClientesPage } from "@/components/clientes/ClientesPage";
@@ -16,18 +17,78 @@ import { ReportesPage } from "@/components/reportes/ReportesPage";
 
 type Tab = "turnos" | "clientes" | "vehiculos" | "repuestos" | "reportes";
 
+const TAB_ORDER: Tab[] = ["turnos", "clientes", "vehiculos", "repuestos", "reportes"];
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("turnos");
   const [showNuevoTurno, setShowNuevoTurno] = useState(false);
   const [turnosRefreshToken, setTurnosRefreshToken] = useState(0);
   const [statsMonth, setStatsMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [calendarioDialogOpen, setCalendarioDialogOpen] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [stats, setStats] = useState({
     turnosPendientes: 0,
     turnosEnProgreso: 0,
     turnosCompletados: 0,
     totalClientes: 0,
   });
+
+  const activeTabRef = useRef(activeTab);
+  const showNuevoTurnoRef = useRef(showNuevoTurno);
+  const calendarioDialogOpenRef = useRef(calendarioDialogOpen);
+
+  activeTabRef.current = activeTab;
+  showNuevoTurnoRef.current = showNuevoTurno;
+  calendarioDialogOpenRef.current = calendarioDialogOpen;
+
+  const hasOpenDialog = showNuevoTurno || calendarioDialogOpen;
+
+  const closeTopLayer = useCallback(() => {
+    if (showNuevoTurnoRef.current) {
+      setShowNuevoTurno(false);
+      return true;
+    }
+    if (calendarioDialogOpenRef.current) {
+      setCalendarioDialogOpen(false);
+      return true;
+    }
+    const currentIdx = TAB_ORDER.indexOf(activeTabRef.current);
+    if (currentIdx > 0) {
+      setActiveTab(TAB_ORDER[currentIdx - 1]);
+      return true;
+    }
+    return false;
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      e.preventDefault();
+      const closed = closeTopLayer();
+      if (!closed) {
+        setShowExitConfirm(true);
+        window.history.pushState(null, "", window.location.href);
+      } else {
+        window.history.pushState(null, "", window.location.href);
+      }
+    };
+
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [closeTopLayer]);
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+  };
+
+  const handleExitConfirm = () => {
+    setShowExitConfirm(false);
+    window.history.back();
+  };
 
   useEffect(() => {
     fetchStats(statsMonth);
@@ -122,6 +183,7 @@ export default function Home() {
             onMonthChange={setStatsMonth}
             onDateSelect={setSelectedDate}
             onCreateTurno={() => setShowNuevoTurno(true)}
+            onDialogOpenChange={setCalendarioDialogOpen}
           />
         )}
         {activeTab === "clientes" && <ClientesPage />}
@@ -148,7 +210,7 @@ export default function Home() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`flex flex-col items-center py-3 px-4 flex-1 transition-colors ${
                   activeTab === tab.id
                     ? "text-white bg-primary/80"
@@ -174,6 +236,34 @@ export default function Home() {
           setTurnosRefreshToken((t) => t + 1);
         }}
       />
+
+      {/* Diálogo de confirmación de salida */}
+      <Dialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>¿Salir de la aplicación?</DialogTitle>
+            <DialogDescription>
+              ¿Seguro que querés salir de Taller MV?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowExitConfirm(false)}
+              className="flex-1"
+            >
+              Quedarse
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleExitConfirm}
+              className="flex-1"
+            >
+              Salir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
